@@ -1,18 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>AR Image Tracking</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div id="ar-container"></div>
+<head>
+  <meta charset="UTF-8" />
+  <title>AR Image Tracking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 
-    <!-- MindAR + Three.js -->
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js"></script>
+  <!-- 1) Import‑map to point bare imports to CDN ESM files -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="ar-container"></div>
 
-    <!-- Your main script -->
-    <script type="module" src="script.js"></script>
-  </body>
+  <!-- 2) One <script type="module"> block, no other <script> tags needed -->
+  <script type="module">
+    import * as THREE        from 'three';
+    import { MindARThree }    from 'mindar-image-three';
+    import { GLTFLoader }     from 'three/addons/loaders/GLTFLoader.js';
+
+    async function start() {
+      // initialize MindAR with your marker:
+      const mindarThree = new MindARThree({
+        container: document.querySelector('#ar-container'),
+        imageTargetSrc: './assets/marker.mind'
+      });
+      const { renderer, scene, camera } = mindarThree;
+
+      // set up anchor + load 3D model:
+      const anchor = mindarThree.addAnchor(0);
+      const loader = new GLTFLoader();
+      const gltf  = await loader.loadAsync('./assets/model.glb');
+      gltf.scene.scale.set(0.2, 0.2, 0.2);
+      anchor.group.add(gltf.scene);
+
+      // simple rotation animation:
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        gltf.scene.rotation.y += clock.getDelta();
+        renderer.render(scene, camera);
+      });
+
+      await mindarThree.start();
+    }
+
+    start();
+  </script>
+</body>
 </html>
