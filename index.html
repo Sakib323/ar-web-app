@@ -49,14 +49,6 @@
         gltf.scene.rotation.y += clock.getDelta();
         renderer.render(scene, camera);
 
-        // Add ambient light and directional light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // soft white light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(0, 1, 1).normalize();
-
-        scene.add(ambientLight);
-        scene.add(directionalLight);
-
       });
 
       await mindarThree.start();
