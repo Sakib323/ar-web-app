@@ -40,16 +40,11 @@
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.2, 0.2, 0.2);
+      gltf.scene.scale.set(0.5, 0.5, 0.5);
       anchor.group.add(gltf.scene);
 
       // simple rotation animation:
-      const clock = new THREE.Clock();
-      renderer.setAnimationLoop(() => {
-        gltf.scene.rotation.y += clock.getDelta();
-        renderer.render(scene, camera);
 
-      });
 
       await mindarThree.start();
     }
