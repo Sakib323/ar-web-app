@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 
+  <!-- Import‑map for modules -->
   <script type="importmap">
   {
     "imports": {
@@ -43,26 +44,22 @@
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
 
-      let modelsLoaded = false; // Track if models have been loaded
-
       // Load animated model in center
       const gltfMain = await loader.loadAsync('./assets/model.glb');
       gltfMain.scene.scale.set(0.2, 0.2, 0.2);
       gltfMain.scene.position.set(0, 0, 0);
+      anchor.group.add(gltfMain.scene);
 
-      // Load static cv.glb (placed on diagonal AC)
+      // Load first static cv.glb (placed on diagonal AC)
       const gltfCV1 = await loader.loadAsync('./assets/cv.glb');
       gltfCV1.scene.scale.set(1, 1, 1);
-      gltfCV1.scene.position.set(-1.0, 0, -1.0);
+      gltfCV1.scene.position.set(-1.0, 0, -1.0); // Increased gap toward A
+      anchor.group.add(gltfCV1.scene);
 
-      // Load static cv.glb (placed opposite on diagonal BD)
+      // Load second static cv.glb (placed opposite on diagonal BD)
       const gltfCV2 = await loader.loadAsync('./assets/cv.glb');
       gltfCV2.scene.scale.set(1, 1, 1);
-      gltfCV2.scene.position.set(1.0, 0, 1.0);
-
-      // Add the models to the anchor group
-      anchor.group.add(gltfMain.scene);
-      anchor.group.add(gltfCV1.scene);
+      gltfCV2.scene.position.set(1.0, 0, 1.0); // Increased gap toward C
       anchor.group.add(gltfCV2.scene);
 
       const audio = document.querySelector('#marker-sound');
@@ -70,26 +67,21 @@
       // Animation
       let animationType = "none";
       let animationInterval = null;
-      const animationOptions = ["rotate360", "bobUpDown", "swayLeftRight", "tilt", "pulse"];
+      const animationOptions = ["rotate360", "rotateX", "rotateY", "rotateZ", "pulse"];
       const chooseRandomAnimation = () => {
         animationType = animationOptions[Math.floor(Math.random() * animationOptions.length)];
       };
 
-      // Make models persistent even when the marker is lost
       anchor.onTargetFound = () => {
-        if (!modelsLoaded) {
-          if (audio) {
-            audio.currentTime = 0;
-            audio.play();
-          }
-          modelsLoaded = true;
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
         }
         chooseRandomAnimation();
         animationInterval = setInterval(chooseRandomAnimation, 2000); // every 2s
       };
 
       anchor.onTargetLost = () => {
-        // Do not remove the models, just stop animations
         animationType = "none";
         clearInterval(animationInterval);
       };
@@ -99,23 +91,23 @@
       renderer.setAnimationLoop(() => {
         const time = clock.getElapsedTime();
 
-        // Reset the animation state
+        // Reset
         gltfMain.scene.rotation.set(0, 0, 0);
         gltfMain.scene.position.set(0, 0, 0);
-        gltfMain.scene.scale.set(0.2, 0.2, 0.2);
+        gltfMain.scene.scale.set(0.1, 0.1, 0.1);
 
         switch (animationType) {
           case "rotate360":
             gltfMain.scene.rotation.y = time * 4;
             break;
-          case "bobUpDown":
-            gltfMain.scene.position.y = Math.sin(time * 6) * 0.15;
+          case "rotateX":
+            gltfMain.scene.rotation.x = time * 2; // Rotate around the X-axis
             break;
-          case "swayLeftRight":
-            gltfMain.scene.rotation.z = Math.sin(time * 6) * 0.4;
+          case "rotateY":
+            gltfMain.scene.rotation.y = time * 2; // Rotate around the Y-axis
             break;
-          case "tilt":
-            gltfMain.scene.rotation.x = Math.sin(time * 5) * 0.5;
+          case "rotateZ":
+            gltfMain.scene.rotation.z = time * 2; // Rotate around the Z-axis
             break;
           case "pulse":
             const scale = 0.2 + Math.sin(time * 5) * 0.05;
