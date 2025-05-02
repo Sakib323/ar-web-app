@@ -48,7 +48,7 @@
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.2, 0.2, 0.2);
+      gltf.scene.scale.set(0.02, 0.02, 0.02);
       anchor.group.add(gltf.scene);
 
       // Play sound when marker is detected
