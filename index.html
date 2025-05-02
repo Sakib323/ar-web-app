@@ -7,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Import‑map for modules -->
   <script type="importmap">
   {
     "imports": {
@@ -22,7 +21,6 @@
 <body>
   <div id="ar-container"></div>
 
-  <!-- 🔊 Marker Sound -->
   <audio id="marker-sound" src="assets/beep.mp3" preload="auto"></audio>
 
   <script type="module">
@@ -37,73 +35,91 @@
       });
       const { renderer, scene, camera } = mindarThree;
 
-      // Lighting
       scene.add(new THREE.AmbientLight(0xffffff, 0.8));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1);
       dirLight.position.set(0, 1, 1).normalize();
       scene.add(dirLight);
 
-      // Load model
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
-      const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.1, 0.1, 0.1);
-      anchor.group.add(gltf.scene);
+
+      let modelsLoaded = false; // Track if models have been loaded
+
+      // Load animated model in center
+      const gltfMain = await loader.loadAsync('./assets/model.glb');
+      gltfMain.scene.scale.set(0.2, 0.2, 0.2);
+      gltfMain.scene.position.set(0, 0, 0);
+
+      // Load static cv.glb (placed on diagonal AC)
+      const gltfCV1 = await loader.loadAsync('./assets/cv.glb');
+      gltfCV1.scene.scale.set(1, 1, 1);
+      gltfCV1.scene.position.set(-1.0, 0, -1.0);
+
+      // Load static cv.glb (placed opposite on diagonal BD)
+      const gltfCV2 = await loader.loadAsync('./assets/cv.glb');
+      gltfCV2.scene.scale.set(1, 1, 1);
+      gltfCV2.scene.position.set(1.0, 0, 1.0);
+
+      // Add the models to the anchor group
+      anchor.group.add(gltfMain.scene);
+      anchor.group.add(gltfCV1.scene);
+      anchor.group.add(gltfCV2.scene);
 
       const audio = document.querySelector('#marker-sound');
 
-      // Animation logic
+      // Animation
       let animationType = "none";
       let animationInterval = null;
-
       const animationOptions = ["rotate360", "bobUpDown", "swayLeftRight", "tilt", "pulse"];
-
       const chooseRandomAnimation = () => {
         animationType = animationOptions[Math.floor(Math.random() * animationOptions.length)];
       };
 
+      // Make models persistent even when the marker is lost
       anchor.onTargetFound = () => {
-        if (audio) {
-          audio.currentTime = 0;
-          audio.play();
+        if (!modelsLoaded) {
+          if (audio) {
+            audio.currentTime = 0;
+            audio.play();
+          }
+          modelsLoaded = true;
         }
         chooseRandomAnimation();
-        animationInterval = setInterval(chooseRandomAnimation, 2000); // every 2 seconds
+        animationInterval = setInterval(chooseRandomAnimation, 2000); // every 2s
       };
 
       anchor.onTargetLost = () => {
+        // Do not remove the models, just stop animations
         animationType = "none";
         clearInterval(animationInterval);
       };
 
-      // Animate
+      // Animate main model only
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        const delta = clock.getDelta();
-        const time = clock.elapsedTime;
+        const time = clock.getElapsedTime();
 
-        // Reset
-        gltf.scene.rotation.set(0, 0, 0);
-        gltf.scene.position.set(0, 0, 0);
-        gltf.scene.scale.set(0.2, 0.2, 0.2);
+        // Reset the animation state
+        gltfMain.scene.rotation.set(0, 0, 0);
+        gltfMain.scene.position.set(0, 0, 0);
+        gltfMain.scene.scale.set(0.2, 0.2, 0.2);
 
-        // Animate based on type (faster)
         switch (animationType) {
           case "rotate360":
-            gltf.scene.rotation.y = time * 4;
+            gltfMain.scene.rotation.y = time * 4;
             break;
           case "bobUpDown":
-            gltf.scene.position.y = Math.sin(time * 6) * 0.15;
+            gltfMain.scene.position.y = Math.sin(time * 6) * 0.15;
             break;
           case "swayLeftRight":
-            gltf.scene.rotation.z = Math.sin(time * 6) * 0.4;
+            gltfMain.scene.rotation.z = Math.sin(time * 6) * 0.4;
             break;
           case "tilt":
-            gltf.scene.rotation.x = Math.sin(time * 5) * 0.5;
+            gltfMain.scene.rotation.x = Math.sin(time * 5) * 0.5;
             break;
           case "pulse":
             const scale = 0.2 + Math.sin(time * 5) * 0.05;
-            gltf.scene.scale.set(scale, scale, scale);
+            gltfMain.scene.scale.set(scale, scale, scale);
             break;
         }
 
