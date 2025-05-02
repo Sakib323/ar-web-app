@@ -47,7 +47,7 @@
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.15, 0.15, 0.15);
+      gltf.scene.scale.set(0.1, 0.1, 0.1);
       anchor.group.add(gltf.scene);
 
       const audio = document.querySelector('#marker-sound');
