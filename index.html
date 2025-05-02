@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Import‑map to point bare imports to CDN ESM files -->
+  <!-- Import‑map for modules -->
   <script type="importmap">
   {
     "imports": {
@@ -22,10 +22,9 @@
 <body>
   <div id="ar-container"></div>
 
-  <!-- 🔊 Audio to play when marker is detected -->
+  <!-- 🔊 Marker Sound -->
   <audio id="marker-sound" src="assets/beep.mp3" preload="auto"></audio>
 
-  <!-- Main script -->
   <script type="module">
     import * as THREE from 'three';
     import { MindARThree } from 'mindar-image-three';
@@ -39,31 +38,75 @@
       const { renderer, scene, camera } = mindarThree;
 
       // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(0, 1, 1).normalize();
-      scene.add(ambientLight, directionalLight);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(0, 1, 1).normalize();
+      scene.add(dirLight);
 
       // Load model
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.02, 0.02, 0.02);
+      gltf.scene.scale.set(0.15, 0.15, 0.15);
       anchor.group.add(gltf.scene);
 
-      // Play sound when marker is detected
       const audio = document.querySelector('#marker-sound');
+
+      // Animation logic
+      let animationType = "none";
+      let animationInterval = null;
+
+      const animationOptions = ["rotate360", "bobUpDown", "swayLeftRight", "tilt", "pulse"];
+
+      const chooseRandomAnimation = () => {
+        animationType = animationOptions[Math.floor(Math.random() * animationOptions.length)];
+      };
+
       anchor.onTargetFound = () => {
         if (audio) {
           audio.currentTime = 0;
           audio.play();
         }
+        chooseRandomAnimation();
+        animationInterval = setInterval(chooseRandomAnimation, 2000); // every 2 seconds
       };
 
-      // Animation loop
+      anchor.onTargetLost = () => {
+        animationType = "none";
+        clearInterval(animationInterval);
+      };
+
+      // Animate
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        gltf.scene.rotation.y += clock.getDelta();
+        const delta = clock.getDelta();
+        const time = clock.elapsedTime;
+
+        // Reset
+        gltf.scene.rotation.set(0, 0, 0);
+        gltf.scene.position.set(0, 0, 0);
+        gltf.scene.scale.set(0.2, 0.2, 0.2);
+
+        // Animate based on type (faster)
+        switch (animationType) {
+          case "rotate360":
+            gltf.scene.rotation.y = time * 4;
+            break;
+          case "bobUpDown":
+            gltf.scene.position.y = Math.sin(time * 6) * 0.15;
+            break;
+          case "swayLeftRight":
+            gltf.scene.rotation.z = Math.sin(time * 6) * 0.4;
+            break;
+          case "tilt":
+            gltf.scene.rotation.x = Math.sin(time * 5) * 0.5;
+            break;
+          case "pulse":
+            const scale = 0.2 + Math.sin(time * 5) * 0.05;
+            gltf.scene.scale.set(scale, scale, scale);
+            break;
+        }
+
         renderer.render(scene, camera);
       });
 
