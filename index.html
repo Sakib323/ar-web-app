@@ -22,6 +22,7 @@
 <body>
   <div id="ar-container"></div>
 
+  <!-- Audio to play on first detection -->
   <audio id="marker-sound" src="assets/beep.mp3" preload="auto"></audio>
 
   <script type="module">
@@ -30,137 +31,118 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     async function start() {
+      // 1) Initialize AR
       const mindarThree = new MindARThree({
         container: document.querySelector('#ar-container'),
         imageTargetSrc: './assets/marker.mind'
       });
       const { renderer, scene, camera } = mindarThree;
 
+      // 2) Lighting
       scene.add(new THREE.AmbientLight(0xffffff, 0.8));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1);
       dirLight.position.set(0, 1, 1).normalize();
       scene.add(dirLight);
 
+      // 3) Load models
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
 
-      // Load animated model in center
+      // 3a) Center animated model
       const gltfMain = await loader.loadAsync('./assets/model.glb');
       gltfMain.scene.scale.set(0.2, 0.2, 0.2);
-      gltfMain.scene.position.set(0, 0, 0);
       anchor.group.add(gltfMain.scene);
 
-      // Load first static cv.glb (placed on diagonal AC)
+      // 3b) Left-side CV model
       const gltfCV1 = await loader.loadAsync('./assets/cv.glb');
       gltfCV1.scene.scale.set(1, 1, 1);
-      gltfCV1.scene.position.set(-1.0, 0, -1.0); // Increased gap toward A
+      gltfCV1.scene.position.set(-1.0, 0, -1.0);
+      gltfCV1.scene.userData = { url: 'https://example1.com' };
       anchor.group.add(gltfCV1.scene);
 
-      // Load second static cv.glb (placed opposite on diagonal BD)
-      const gltfCV2 = await loader.loadAsync('./assets/cv.glb');
+      // 3c) Right-side CV model
+      const gltfCV2 = await loader.loadAsync('./assets/cv3.glb');
       gltfCV2.scene.scale.set(1, 1, 1);
-      gltfCV2.scene.position.set(1.0, 0, 1.0); // Increased gap toward C
+      gltfCV2.scene.position.set(1.0, 0, 1.0);
+      gltfCV2.scene.userData = { url: 'https://example2.com' };
       anchor.group.add(gltfCV2.scene);
 
+      // 4) Audio element
       const audio = document.querySelector('#marker-sound');
 
-      // Animation
-      let animationType = "none";
+      // 5) Animation setup for center model
+      const animationOptions = ['rotate360', 'rotateX', 'rotateY', 'rotateZ', 'pulse'];
+      let animationType = 'none';
       let animationInterval = null;
-      const animationOptions = ["rotate360", "rotateX", "rotateY", "rotateZ", "pulse"];
       const chooseRandomAnimation = () => {
         animationType = animationOptions[Math.floor(Math.random() * animationOptions.length)];
       };
 
       anchor.onTargetFound = () => {
-        if (audio) {
+        // play sound only first time
+        if (audio && audio.paused) {
           audio.currentTime = 0;
           audio.play();
         }
         chooseRandomAnimation();
-        animationInterval = setInterval(chooseRandomAnimation, 2000); // every 2s
+        animationInterval = setInterval(chooseRandomAnimation, 2000);
       };
-
       anchor.onTargetLost = () => {
-        animationType = "none";
+        animationType = 'none';
         clearInterval(animationInterval);
       };
 
-      // Raycasting for interaction
+      // 6) Raycaster for clicks
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
-      let clickedObject = null;
-
-      // Handle mouse click
-      const onMouseClick = (event) => {
-        // Update mouse position
+      window.addEventListener('click', event => {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        // Cast a ray to find intersections
-        raycaster.updateMatrixWorld();
         raycaster.setFromCamera(mouse, camera);
-
-        const intersects = raycaster.intersectObjects(scene.children, true);
-
-        if (intersects.length > 0) {
-          clickedObject = intersects[0].object;
-
-          // Check if clicked on cv models
-          if (clickedObject === gltfCV1.scene) {
-            scaleUpAndRedirect(gltfCV1.scene, 'https://example1.com');
-          } else if (clickedObject === gltfCV2.scene) {
-            scaleUpAndRedirect(gltfCV2.scene, 'https://example2.com');
+        const hits = raycaster.intersectObjects(anchor.group.children, true);
+        if (hits.length > 0) {
+          // find parent with URL
+          let obj = hits[0].object;
+          while (obj && !obj.userData.url) obj = obj.parent;
+          if (obj && obj.userData.url) {
+            obj.scale.multiplyScalar(1.2);
+            setTimeout(() => window.location.href = obj.userData.url, 500);
           }
         }
-      };
+      });
 
-      // Scale up the clicked model and redirect
-      const scaleUpAndRedirect = (object, url) => {
-        // Scale up the object
-        object.scale.set(1.2, 1.2, 1.2);
-
-        // Redirect to the URL after a short delay
-        setTimeout(() => {
-          window.location.href = url;
-        }, 500); // Redirect after 500ms delay (to give the user a chance to see the scaling)
-      };
-
-      // Listen for mouse click events
-      window.addEventListener('click', onMouseClick);
-
-      // Animate main model only
+      // 7) Render loop with animation
       const clock = new THREE.Clock();
       renderer.setAnimationLoop(() => {
-        const time = clock.getElapsedTime();
+        const t = clock.getElapsedTime();
 
-        // Reset
+        // reset main model
         gltfMain.scene.rotation.set(0, 0, 0);
-        gltfMain.scene.position.set(0, 0, 0);
-        gltfMain.scene.scale.set(0.1, 0.1, 0.1);
+        gltfMain.scene.scale.set(0.2, 0.2, 0.2);
 
         switch (animationType) {
-          case "rotate360":
-            gltfMain.scene.rotation.y = time * 4;
+          case 'rotate360':
+            gltfMain.scene.rotation.y = t * 4;
             break;
-          case "rotateX":
-            gltfMain.scene.rotation.x = time * 2;
+          case 'rotateX':
+            gltfMain.scene.rotation.x = t * 2;
             break;
-          case "rotateY":
-            gltfMain.scene.rotation.y = time * 2;
+          case 'rotateY':
+            gltfMain.scene.rotation.y = t * 2;
             break;
-          case "rotateZ":
-            gltfMain.scene.rotation.z = time * 2;
+          case 'rotateZ':
+            gltfMain.scene.rotation.z = t * 2;
             break;
-          case "pulse":
-            const scale = 0.1 + Math.sin(time * 5) * 0.05;
-            gltfMain.scene.scale.set(scale, scale, scale);
+          case 'pulse':
+            const s = 0.1 + Math.sin(t * 5) * 0.05;
+            gltfMain.scene.scale.set(s, s, s);
             break;
         }
 
         renderer.render(scene, camera);
       });
 
+      // 8) Start AR
       await mindarThree.start();
     }
 
