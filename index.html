@@ -110,7 +110,7 @@
             gltfMain.scene.rotation.z = time * 2; // Rotate around the Z-axis
             break;
           case "pulse":
-            const scale = 0.2 + Math.sin(time * 5) * 0.05;
+            const scale = 0.1 + Math.sin(time * 5) * 0.05;
             gltfMain.scene.scale.set(scale, scale, scale);
             break;
         }
