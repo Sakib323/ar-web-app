@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>AR Image Tracking</title>
@@ -17,14 +18,15 @@
   }
   </script>
 </head>
+
 <body>
   <div id="ar-container"></div>
 
   <!-- 2) One <script type="module"> block, no other <script> tags needed -->
   <script type="module">
-    import * as THREE        from 'three';
-    import { MindARThree }    from 'mindar-image-three';
-    import { GLTFLoader }     from 'three/addons/loaders/GLTFLoader.js';
+    import * as THREE from 'three';
+    import { MindARThree } from 'mindar-image-three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     async function start() {
       // initialize MindAR with your marker:
@@ -37,7 +39,7 @@
       // set up anchor + load 3D model:
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
-      const gltf  = await loader.loadAsync('./assets/model.glb');
+      const gltf = await loader.loadAsync('./assets/model.glb');
       gltf.scene.scale.set(0.2, 0.2, 0.2);
       anchor.group.add(gltf.scene);
 
@@ -46,6 +48,15 @@
       renderer.setAnimationLoop(() => {
         gltf.scene.rotation.y += clock.getDelta();
         renderer.render(scene, camera);
+
+        // Add ambient light and directional light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // soft white light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(0, 1, 1).normalize();
+
+        scene.add(ambientLight);
+        scene.add(directionalLight);
+
       });
 
       await mindarThree.start();
@@ -54,4 +65,5 @@
     start();
   </script>
 </body>
+
 </html>
