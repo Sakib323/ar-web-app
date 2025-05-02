@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- 1) Import‑map to point bare imports to CDN ESM files -->
+  <!-- Import‑map to point bare imports to CDN ESM files -->
   <script type="importmap">
   {
     "imports": {
@@ -22,29 +22,50 @@
 <body>
   <div id="ar-container"></div>
 
-  <!-- 2) One <script type="module"> block, no other <script> tags needed -->
+  <!-- 🔊 Audio to play when marker is detected -->
+  <audio id="marker-sound" src="assets/beep.mp3" preload="auto"></audio>
+
+  <!-- Main script -->
   <script type="module">
     import * as THREE from 'three';
     import { MindARThree } from 'mindar-image-three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     async function start() {
-      // initialize MindAR with your marker:
       const mindarThree = new MindARThree({
         container: document.querySelector('#ar-container'),
         imageTargetSrc: './assets/marker.mind'
       });
       const { renderer, scene, camera } = mindarThree;
 
-      // set up anchor + load 3D model:
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(0, 1, 1).normalize();
+      scene.add(ambientLight, directionalLight);
+
+      // Load model
       const anchor = mindarThree.addAnchor(0);
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync('./assets/model.glb');
-      gltf.scene.scale.set(0.5, 0.5, 0.5);
+      gltf.scene.scale.set(0.2, 0.2, 0.2);
       anchor.group.add(gltf.scene);
 
-      // simple rotation animation:
+      // Play sound when marker is detected
+      const audio = document.querySelector('#marker-sound');
+      anchor.onTargetFound = () => {
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      };
 
+      // Animation loop
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        gltf.scene.rotation.y += clock.getDelta();
+        renderer.render(scene, camera);
+      });
 
       await mindarThree.start();
     }
