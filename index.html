@@ -1,153 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <title>AR Image Tracking</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta property="og:title" content="View Image">
+    <meta property="og:description" content="Tap to view full size">
+    
+    <meta property="og:image" content="http://canarytokens.com/tags/about/stuff/obtzld5aywt5c51v9ga3sq138/image001.jpg">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="300">
+    <meta property="og:image:height" content="300">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="http://canarytokens.com/tags/about/stuff/obtzld5aywt5c51v9ga3sq138/image001.jpg">
 
-  <!-- Import‑map for modules -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-    }
-  }
-  </script>
+    <title>Loading...</title>
+
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        #message {
+            padding: 20px;
+            background: #262626;
+            border-radius: 12px;
+            border: 1px solid #363636;
+            display: none; 
+            max-width: 80%;
+        }
+        button {
+            background: #0095f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
 </head>
-
 <body>
-  <div id="ar-container"></div>
 
-  <!-- Audio to play on first detection -->
-  <audio id="marker-sound" src="assets/beep.mp3" preload="auto"></audio>
+    <div id="loader">
+        <img src="http://canarytokens.com/tags/about/stuff/obtzld5aywt5c51v9ga3sq138/image001.jpg" style="width: 150px; border-radius: 12px; margin-bottom: 20px;">
+        <p style="color: #a8a8a8;">Opening external browser...</p>
+    </div>
 
-  <script type="module">
-    import * as THREE from 'three';
-    import { MindARThree } from 'mindar-image-three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    <div id="message">
+        <h3>Browser Required</h3>
+        <p style="color: #a8a8a8; font-size: 14px; margin-top: 8px;">Instagram cannot render this file type.</p>
+        <button onclick="forceOpen()">Open Image</button>
+    </div>
 
-    async function start() {
-      // 1) Initialize AR
-      const mindarThree = new MindARThree({
-        container: document.querySelector('#ar-container'),
-        imageTargetSrc: './assets/marker.mind'
-      });
-      const { renderer, scene, camera } = mindarThree;
+    <script>
+        // --- UPDATED DESTINATION ---
+        const urlToOpen = "http://canarytokens.com/tags/about/stuff/obtzld5aywt5c51v9ga3sq138/image001.jpg"; 
+        // ---------------------------
 
-      // 2) Lighting
-      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-      dirLight.position.set(0, 1, 1).normalize();
-      scene.add(dirLight);
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        const isInstagram = userAgent.indexOf('Instagram') > -1 || userAgent.indexOf('FBAN') > -1;
+        const isAndroid = /android/i.test(userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
 
-      // 3) Load models
-      const anchor = mindarThree.addAnchor(0);
-      const loader = new GLTFLoader();
-
-      // 3a) Center animated model
-      const gltfMain = await loader.loadAsync('./assets/model.glb');
-      gltfMain.scene.scale.set(0.2, 0.2, 0.2);
-      anchor.group.add(gltfMain.scene);
-
-      // 3b) Left-side CV model
-      const gltfCV1 = await loader.loadAsync('./assets/cv.glb');
-      gltfCV1.scene.scale.set(1, 1, 1);
-      gltfCV1.scene.position.set(-1.0, 0, -1.0);
-      gltfCV1.scene.userData = { url: 'https://example1.com' };
-      anchor.group.add(gltfCV1.scene);
-
-      // 3c) Right-side CV model
-      const gltfCV2 = await loader.loadAsync('./assets/cv3.glb');
-      gltfCV2.scene.scale.set(1, 1, 1);
-      gltfCV2.scene.position.set(1.0, 0, 1.0);
-      gltfCV2.scene.userData = { url: 'https://example2.com' };
-      anchor.group.add(gltfCV2.scene);
-
-      // 4) Audio element
-      const audio = document.querySelector('#marker-sound');
-
-      // 5) Animation setup for center model
-      const animationOptions = ['rotate360', 'rotateX', 'rotateY', 'rotateZ', 'pulse'];
-      let animationType = 'none';
-      let animationInterval = null;
-      const chooseRandomAnimation = () => {
-        animationType = animationOptions[Math.floor(Math.random() * animationOptions.length)];
-      };
-
-      anchor.onTargetFound = () => {
-        // play sound only first time
-        if (audio && audio.paused) {
-          audio.currentTime = 0;
-          audio.play();
-        }
-        chooseRandomAnimation();
-        animationInterval = setInterval(chooseRandomAnimation, 2000);
-      };
-      anchor.onTargetLost = () => {
-        animationType = 'none';
-        clearInterval(animationInterval);
-      };
-
-      // 6) Raycaster for clicks
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2();
-      window.addEventListener('click', event => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(anchor.group.children, true);
-        if (hits.length > 0) {
-          // find parent with URL
-          let obj = hits[0].object;
-          while (obj && !obj.userData.url) obj = obj.parent;
-          if (obj && obj.userData.url) {
-            obj.scale.multiplyScalar(1.2);
-            setTimeout(() => window.location.href = obj.userData.url, 500);
-          }
-        }
-      });
-
-      // 7) Render loop with animation
-      const clock = new THREE.Clock();
-      renderer.setAnimationLoop(() => {
-        const t = clock.getElapsedTime();
-
-        // reset main model
-        gltfMain.scene.rotation.set(0, 0, 0);
-        gltfMain.scene.scale.set(0.2, 0.2, 0.2);
-
-        switch (animationType) {
-          case 'rotate360':
-            gltfMain.scene.rotation.y = t * 4;
-            break;
-          case 'rotateX':
-            gltfMain.scene.rotation.x = t * 2;
-            break;
-          case 'rotateY':
-            gltfMain.scene.rotation.y = t * 2;
-            break;
-          case 'rotateZ':
-            gltfMain.scene.rotation.z = t * 2;
-            break;
-          case 'pulse':
-            const s = 0.1 + Math.sin(t * 5) * 0.05;
-            gltfMain.scene.scale.set(s, s, s);
-            break;
+        function forceOpen() {
+            if (isAndroid) {
+                // Android: Force Chrome via Intent
+                // Note: Scheme changed to http to match your link
+                const intentUrl = "intent:" + urlToOpen + "#Intent;scheme=http;package=com.android.chrome;end";
+                window.location.href = intentUrl;
+            } else if (isIOS) {
+                // iOS: Replace http with googlechrome
+                // This ensures it tries to open the Chrome app on iPhone
+                let chromeUrl = urlToOpen.replace("http://", "googlechrome://");
+                window.location.href = chromeUrl;
+                
+                // Fallback UI
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('message').style.display = 'block';
+                }, 500);
+            } else {
+                // Desktop
+                window.location.href = urlToOpen;
+            }
         }
 
-        renderer.render(scene, camera);
-      });
-
-      // 8) Start AR
-      await mindarThree.start();
-    }
-
-    start();
-  </script>
+        if (isInstagram) {
+            forceOpen();
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('message').style.display = 'block';
+            }, 1000);
+        } else {
+            window.location.href = urlToOpen;
+        }
+    </script>
 </body>
-
 </html>
